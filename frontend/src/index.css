@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  background: #f5f5f5;
+}
+
+/* 🔥 CONTENEDOR GLOBAL */
+.container {
+  max-width: 1200px;
+}
+
+/* 🔥 CARDS SOLO DE PRODUCTO */
+.producto-card {
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.producto-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+}
+
+/* 🔥 IMÁGENES SOLO DE PRODUCTO */
+.producto-img {
+  border-radius: 10px;
+  height: 200px;
+  object-fit: cover;
+}
+
+/* 🔥 BOTONES SOLO DEL SISTEMA */
+.btn-custom {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-custom:hover {
+  transform: scale(1.05);
+}
+
+/* 🔥 CARRITO */
+.carrito-item {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.carrito-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+}
