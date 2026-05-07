@@ -1,47 +1,47 @@
-import { db } from "../config/db.js";
+import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// GET TODOS LOS PRODUCTOS
 export const getProductos = async (req, res) => {
   try {
+    const { data, error } = await supabase
+      .from("producto")
+      .select("*")
+      .order("id_producto", { ascending: false });
 
-    const result = await db.query(`
-      SELECT * FROM producto
-      ORDER BY id_producto DESC
-    `);
+    if (error) throw error;
 
-    res.json(result.rows);
+    res.json(data);
 
   } catch (error) {
-
     console.log(error);
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
+// GET POR ID
 export const getProductoById = async (req, res) => {
   try {
+    const { data, error } = await supabase
+      .from("producto")
+      .select("*")
+      .eq("id_producto", req.params.id)
+      .single();
 
-    const result = await db.query(
-      "SELECT * FROM producto WHERE id_producto = $1",
-      [req.params.id]
-    );
-
-    if (result.rows.length === 0) {
+    if (error) {
       return res.status(404).json({
         error: "Producto no encontrado"
       });
     }
 
-    res.json(result.rows[0]);
+    res.json(data);
 
   } catch (error) {
-
     console.log(error);
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 };
