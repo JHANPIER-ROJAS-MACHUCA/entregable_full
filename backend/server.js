@@ -11,12 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 VALIDACIÓN DE VARIABLES
+// 🔥 VALIDACIÓN
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ Faltan variables de entorno de Supabase");
 }
 
-// 🔥 SUPABASE CLIENT
+// 🔥 SUPABASE
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -27,7 +27,7 @@ app.use("/productos", productoRoutes);
 app.use("/ventas", ventaRoutes);
 app.use("/clientes", clienteRoutes);
 
-// 🔥 RUTA BASE
+// 🔥 BASE
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀");
 });
@@ -35,9 +35,7 @@ app.get("/", (req, res) => {
 // 🔥 TEST DB
 app.get("/test-db", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("productos")
-      .select("*");
+    const { data, error } = await supabase.from("productos").select("*");
 
     if (error) {
       return res.status(500).json({
