@@ -1,19 +1,33 @@
-import { db } from "../config/db.js";
+import { createClient } from "@supabase/supabase-js";
 
-export const crearCliente = (req, res) => {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export const crearCliente = async (req, res) => {
   const { nombres, telefono } = req.body;
 
-  const sql = `
-    INSERT INTO clientes (nombres, telefono)
-    VALUES (?, ?)
-  `;
+  try {
+    const { data, error } = await supabase
+      .from("clientes")
+      .insert([
+        {
+          nombres,
+          telefono,
+        },
+      ])
+      .select()
+      .single();
 
-  db.query(sql, [nombres, telefono], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json(err);
+    if (error) {
+      return res.status(500).json(error);
     }
 
-    res.json({ id_cliente: result.insertId });
-  });
+    res.json({ id_cliente: data.id_cliente });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
 };
