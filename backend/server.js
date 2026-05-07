@@ -8,10 +8,16 @@ import clienteRoutes from "./routes/clienteRoutes.js";
 
 const app = express();
 
+// 🔥 MIDDLEWARES
 app.use(cors());
 app.use(express.json());
 
-// 🔥 SUPABASE
+// 🔥 VALIDACIÓN DE VARIABLES DE ENTORNO (IMPORTANTE)
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("❌ Faltan variables de entorno de Supabase");
+}
+
+// 🔥 SUPABASE CLIENT
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -22,20 +28,35 @@ app.use("/productos", productoRoutes);
 app.use("/ventas", ventaRoutes);
 app.use("/clientes", clienteRoutes);
 
-// 🔥 TEST
+// 🔥 RUTA BASE
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀");
 });
 
+// 🔥 TEST CONEXIÓN A SUPABASE
 app.get("/test-db", async (req, res) => {
-  const { data, error } = await supabase.from("productos").select("*");
+  try {
+    const { data, error } = await supabase
+      .from("productos")
+      .select("*");
 
-  if (error) return res.status(500).json(error);
+    if (error) {
+      return res.status(500).json({
+        message: "Error en Supabase",
+        error,
+      });
+    }
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error del servidor",
+      error: err.message,
+    });
+  }
 });
 
-// 🔥 PORT CORRECTO PARA RENDER
+// 🔥 PORT PARA RENDER (OBLIGATORIO)
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
