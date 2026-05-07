@@ -5,11 +5,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// 🔥 GENERAR CÓDIGO
 const generarCodigo = () => {
   return "PAY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
-// 🔹 Crear pago
+
 export const crearPago = async (req, res) => {
   const { nombre, telefono, total } = req.body;
 
@@ -30,9 +31,13 @@ export const crearPago = async (req, res) => {
   res.json({ codigo });
 };
 
-// 🔹 Subir comprobante
+
 export const subirComprobante = async (req, res) => {
   const { codigo } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: "No se envió archivo" });
+  }
 
   const file = req.file.filename;
 
@@ -46,7 +51,7 @@ export const subirComprobante = async (req, res) => {
   res.json({ ok: true });
 };
 
-// 🔹 Listar pagos admin
+
 export const listarPagos = async (req, res) => {
   const { data, error } = await supabase
     .from("pagos")
@@ -58,26 +63,26 @@ export const listarPagos = async (req, res) => {
   res.json(data);
 };
 
-// 🔹 Confirmar pago (SIMPLIFICADO SIN TRANSACCIONES SQL)
+
 export const confirmarPago = async (req, res) => {
   const { codigo, carrito } = req.body;
 
   try {
-    // obtener pago
-    const { data: pagos, error: errorPago } = await supabase
+    // 1. obtener pago
+    const { data: pago, error: errorPago } = await supabase
       .from("pagos")
       .select("*")
       .eq("codigo", codigo)
       .eq("estado", "pendiente")
       .single();
 
-    if (errorPago || !pagos) {
+    if (errorPago || !pago) {
       return res.status(400).json({ error: "Pago inválido" });
     }
 
-    const total = pagos.total;
+    const total = pago.total;
 
-    // crear venta
+    // 2. crear venta
     const { data: venta, error: errorVenta } = await supabase
       .from("ventas")
       .insert([
@@ -92,34 +97,43 @@ export const confirmarPago = async (req, res) => {
 
     if (errorVenta) return res.status(500).json(errorVenta);
 
-    const idVenta = venta.id_venta;
+    // 🔥 ID seguro (evita undefined)
+    const idVenta = venta.id_venta || venta.id;
 
-    // detalles
+    // 3. detalle de venta
     for (const item of carrito) {
-      await supabase.from("detalle_venta").insert([
-        {
-          id_venta: idVenta,
-          id_producto: item.id_producto,
-          cantidad: item.cantidad,
-          precio_unitario: item.precio,
-          subtotal: item.subtotal,
-        },
-      ]);
+      const { error: errorDetalle } = await supabase
+        .from("detalle_venta")
+        .insert([
+          {
+            id_venta: idVenta,
+            id_producto: item.id_producto,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio,
+            subtotal: item.subtotal,
+          },
+        ]);
 
-      // actualizar stock
-      const { data: prod } = await supabase
+      if (errorDetalle) console.log(errorDetalle);
+
+      // 4. actualizar stock
+      const { data: producto } = await supabase
         .from("producto")
         .select("stock")
         .eq("id_producto", item.id_producto)
         .single();
 
-      await supabase
-        .from("producto")
-        .update({ stock: prod.stock - item.cantidad })
-        .eq("id_producto", item.id_producto);
+      if (producto) {
+        await supabase
+          .from("producto")
+          .update({
+            stock: producto.stock - item.cantidad,
+          })
+          .eq("id_producto", item.id_producto);
+      }
     }
 
-    // actualizar pago
+    // 5. actualizar pago
     await supabase
       .from("pagos")
       .update({ estado: "pagado" })
