@@ -11,16 +11,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-<<<<<<< HEAD
-// 🔥 VALIDACIÓN DE VARIABLES DE ENTORNO (IMPORTANTE)
+// 🔥 VALIDACIÓN DE VARIABLES
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ Faltan variables de entorno de Supabase");
 }
 
 // 🔥 SUPABASE CLIENT
-=======
-// 🔥 SUPABASE
->>>>>>> 7bf9fa9 (fix backend server)
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -31,17 +27,12 @@ app.use("/productos", productoRoutes);
 app.use("/ventas", ventaRoutes);
 app.use("/clientes", clienteRoutes);
 
-<<<<<<< HEAD
 // 🔥 RUTA BASE
-=======
-// 🔥 TEST
->>>>>>> 7bf9fa9 (fix backend server)
 app.get("/", (req, res) => {
   res.send("API funcionando 🚀");
 });
 
-<<<<<<< HEAD
-// 🔥 TEST CONEXIÓN A SUPABASE
+// 🔥 TEST DB
 app.get("/test-db", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -64,24 +55,9 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
-// 🔥 PORT PARA RENDER (OBLIGATORIO)
-=======
-app.get("/test-db", async (req, res) => {
-  const { data, error } = await supabase.from("productos").select("*");
-
-  if (error) return res.status(500).json(error);
-
-  res.json(data);
-});
-
-// 🔥 PORT CORRECTO PARA RENDER
->>>>>>> 7bf9fa9 (fix backend server)
+// 🔥 PORT RENDER
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor en puerto ${PORT}`);
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> 7bf9fa9 (fix backend server)
