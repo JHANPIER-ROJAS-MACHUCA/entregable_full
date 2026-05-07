@@ -1,98 +1,86 @@
-import { db } from "../config/db.js";
+import { createClient } from "@supabase/supabase-js";
 
-export const crearVenta = (req, res) => {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export const crearVenta = async (req, res) => {
   const { cliente, carrito, total } = req.body;
 
   if (!cliente || !carrito || carrito.length === 0) {
     return res.status(400).json({ msg: "Datos inválidos" });
   }
 
-  db.beginTransaction((err) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json(err);
+  try {
+    // 1. Crear venta
+    const { data: venta, error: errorVenta } = await supabase
+      .from("ventas")
+      .insert([
+        {
+          id_cliente: cliente,
+          total,
+          estado: "pagado",
+          metodo_pago: "YAPE",
+        },
+      ])
+      .select()
+      .single();
+
+    if (errorVenta) throw errorVenta;
+
+    const idVenta = venta.id_venta;
+
+    // 2. Procesar productos
+    for (const p of carrito) {
+      // verificar stock
+      const { data: producto, error: errorProd } = await supabase
+        .from("producto")
+        .select("stock")
+        .eq("id_producto", p.id_producto)
+        .single();
+
+      if (errorProd || !producto) {
+        return res.status(400).json({ msg: "Producto no encontrado" });
+      }
+
+      if (producto.stock < p.cantidad) {
+        return res.status(400).json({ msg: "Stock insuficiente" });
+      }
+
+      // detalle venta
+      const { error: errorDetalle } = await supabase
+        .from("detalle_venta")
+        .insert([
+          {
+            id_venta: idVenta,
+            id_producto: p.id_producto,
+            cantidad: p.cantidad,
+            precio_unitario: p.precio,
+            subtotal: p.subtotal,
+          },
+        ]);
+
+      if (errorDetalle) throw errorDetalle;
+
+      // actualizar stock
+      const { error: errorStock } = await supabase
+        .from("producto")
+        .update({
+          stock: producto.stock - p.cantidad,
+        })
+        .eq("id_producto", p.id_producto);
+
+      if (errorStock) throw errorStock;
     }
 
-    db.query(
-      `INSERT INTO ventas (id_cliente, total, estado, metodo_pago)
-       VALUES (?, ?, 'pagado', 'YAPE')`,
-      [cliente, total],
-      (err, result) => {
+    res.json({
+      msg: "✅ Compra realizada",
+      idVenta,
+    });
 
-        if (err) {
-          return db.rollback(() => res.status(500).json(err));
-        }
-
-        const idVenta = result.insertId;
-        let completados = 0;
-
-        carrito.forEach((p) => {
-
-          db.query(
-            "SELECT stock FROM producto WHERE id_producto = ?",
-            [p.id_producto],
-            (err, rows) => {
-
-              if (err) {
-                return db.rollback(() => res.status(500).json(err));
-              }
-
-              if (!rows.length || rows[0].stock < p.cantidad) {
-                return db.rollback(() =>
-                  res.status(400).json({ msg: "Stock insuficiente" })
-                );
-              }
-
-              db.query(
-                `INSERT INTO detalle_venta 
-                (id_venta, id_producto, cantidad, precio_unitario, subtotal)
-                VALUES (?, ?, ?, ?, ?)`,
-                [idVenta, p.id_producto, p.cantidad, p.precio, p.subtotal],
-                (err) => {
-
-                  if (err) {
-                    return db.rollback(() => res.status(500).json(err));
-                  }
-
-                  db.query(
-                    "UPDATE producto SET stock = stock - ? WHERE id_producto = ?",
-                    [p.cantidad, p.id_producto],
-                    (err) => {
-
-                      if (err) {
-                        return db.rollback(() => res.status(500).json(err));
-                      }
-
-                      completados++;
-
-                      if (completados === carrito.length) {
-
-                        db.commit((err) => {
-                          if (err) {
-                            return db.rollback(() => res.status(500).json(err));
-                          }
-
-                          res.json({
-                            msg: "✅ Compra realizada",
-                            idVenta
-                          });
-                        });
-
-                      }
-
-                    }
-                  );
-
-                }
-              );
-
-            }
-          );
-
-        });
-
-      }
-    );
-
-  });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
 };
